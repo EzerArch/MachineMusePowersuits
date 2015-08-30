@@ -4,7 +4,7 @@ import java.net.URL
 
 import cpw.mods.fml.client.registry.{ClientRegistry, RenderingRegistry}
 import cpw.mods.fml.common.FMLCommonHandler
-import net.machinemuse.general.sound.SoundLoader
+import net.machinemuse.general.sound.SoundDictionary
 import net.machinemuse.numina.general.MuseLogger
 import net.machinemuse.numina.network.{MusePacket, MusePacketHandler, MusePacketModeChangeRequest, PacketSender}
 import net.machinemuse.numina.render.RenderGameOverlayEventHandler
@@ -44,7 +44,7 @@ trait CommonProxy {
 
 class ClientProxy extends CommonProxy {
   override def registerEvents {
-    MinecraftForge.EVENT_BUS.register(new SoundLoader)
+    MinecraftForge.EVENT_BUS.register(new SoundDictionary)
   }
 
   /**
@@ -76,7 +76,7 @@ class ClientProxy extends CommonProxy {
     }
     catch {
       case e: Throwable => {
-        MuseLogger.logException("Loading shaders failed!", e)
+        MuseLogger.logDebug("Loading shaders failed!")
       }
     }
   }

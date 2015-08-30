@@ -1,23 +1,24 @@
 package net.machinemuse.api.electricity
 
 import cofh.api.energy.IEnergyContainerItem
+import ic2.api.item.ElectricItem
+import ic2.api.item.IElectricItemManager
+import ic2.api.item.ISpecialElectricItem
+
 import cpw.mods.fml.common.Optional
 import net.machinemuse.api.ModuleManager
 import net.machinemuse.api.electricity.ElectricConversions._
 import net.machinemuse.utils.{ElectricItemUtils, MuseItemUtils}
-import net.minecraft.item.ItemStack
+import net.minecraft.entity.EntityLivingBase
+import net.minecraft.item.{Item, ItemStack}
 
 /**
  * Author: MachineMuse (Claire Semple)
  * Created: 10:12 PM, 4/20/13
  */
-@Optional.Interface(iface = "ic2.api.item.ICustomElectricItem", modid = "IC2", striprefs = true)
 @Optional.Interface(iface = "cofh.api.energy.IEnergyContainerItem", modid = "CoFHCore", striprefs = true)
-trait MuseElectricItem
-  extends IEnergyContainerItem {
-  
-  //  with ICustomElectricItem // IC2
-  // ICBM
+trait MuseElectricItem extends Item
+with IEnergyContainerItem {
   /**
    * Call to get the energy of an item
    *
@@ -82,50 +83,6 @@ trait MuseElectricItem
     }
   }
 
-  // IC2
-  def canProvideEnergy(itemStack: ItemStack): Boolean = true
-
-  def getMaxCharge(itemStack: ItemStack): Int = museEnergyToEU(getCurrentEnergy(itemStack)).asInstanceOf[Int]
-
-  def getTier(itemStack: ItemStack): Int = ElectricConversions.getTier(itemStack)
-
-  def getTransferLimit(itemStack: ItemStack): Int = museEnergyToEU(Math.sqrt(getMaxEnergy(itemStack))).asInstanceOf[Int]
-
-  def charge(itemStack: ItemStack, amount: Int, tier: Int, ignoreTransferLimit: Boolean, simulate: Boolean): Int = {
-    val current: Double = getCurrentEnergy(itemStack)
-    val transfer = {
-      if (ignoreTransferLimit || amount < getTransferLimit(itemStack))
-        museEnergyFromEU(amount)
-      else
-        getTransferLimit(itemStack)
-    }
-    val given: Double = giveEnergyTo(itemStack, transfer)
-    if (simulate) {
-      setCurrentEnergy(itemStack, current)
-    }
-    museEnergyToEU(given).toInt
-  }
-
-  def discharge(itemStack: ItemStack, amount: Int, tier: Int, ignoreTransferLimit: Boolean, simulate: Boolean): Int = {
-    val current: Double = getCurrentEnergy(itemStack)
-    val transfer = {
-      if (ignoreTransferLimit || amount < getTransferLimit(itemStack))
-        museEnergyFromEU(amount)
-      else
-        getTransferLimit(itemStack)
-    }
-    val taken: Double = drainEnergyFrom(itemStack, transfer)
-    if (simulate) {
-      setCurrentEnergy(itemStack, current)
-    }
-    museEnergyToEU(taken).toInt
-  }
-
-  def canUse(itemStack: ItemStack, amount: Int): Boolean = museEnergyFromEU(amount) < getCurrentEnergy(itemStack)
-
-
-  def canShowChargeToolTip(itemStack: ItemStack): Boolean = false
-
   // TE
   def receiveEnergy(stack: ItemStack, energy: Int, simulate: Boolean): Int = {
     val current: Double = getCurrentEnergy(stack)
@@ -151,4 +108,5 @@ trait MuseElectricItem
 
   def getMaxEnergyStored(theItem: ItemStack) = museEnergyToRF(getMaxEnergy(theItem)).toInt
 
+  override def getMaxDamage(itemStack: ItemStack) = 0
 }

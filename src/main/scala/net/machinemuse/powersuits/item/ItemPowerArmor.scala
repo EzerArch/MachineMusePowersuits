@@ -1,10 +1,11 @@
 package net.machinemuse.powersuits.item
 
 import cpw.mods.fml.relauncher.{Side, SideOnly}
-import net.machinemuse.api.{IModularItem, ModuleManager}
+import net.machinemuse.api.{IModularItem, ArmorTraits, ModuleManager}
 import net.machinemuse.numina.geometry.Colour
 import net.machinemuse.powersuits.client.render.item.ArmorModel
-import net.machinemuse.powersuits.common.Config
+import net.machinemuse.powersuits.common.{ModCompatability, Config}
+import net.machinemuse.powersuits.powermodule.armor.HazmatModule
 import net.machinemuse.powersuits.powermodule.misc.{InvisibilityModule, TintModule, TransparentArmorModule}
 import net.machinemuse.utils._
 import net.minecraft.client.model.ModelBiped
@@ -23,6 +24,7 @@ import net.minecraftforge.common.ISpecialArmor
 abstract class ItemPowerArmor(renderIndex: Int, armorType: Int)
   extends ItemElectricArmor(ItemArmor.ArmorMaterial.IRON, renderIndex, armorType)
   with ISpecialArmor
+  with ArmorTraits
   with IModularItem {
   setMaxStackSize(1)
   setCreativeTab(Config.getCreativeTab)
@@ -32,9 +34,14 @@ abstract class ItemPowerArmor(renderIndex: Int, armorType: Int)
    * calculations.
    */
   override def getProperties(player: EntityLivingBase, armor: ItemStack, source: DamageSource, damage: Double, slot: Int): ISpecialArmor.ArmorProperties = {
-    val priority: Int = 1
+    val priority: Int = 0
     if (source.isFireDamage && !(source == MuseHeatUtils.overheatDamage)) {
       return new ISpecialArmor.ArmorProperties(priority, 0.25, (25 * damage).toInt)
+    }
+    if(ModuleManager.itemHasModule(armor, HazmatModule.MODULE_HAZMAT)) {
+      if(source.damageType.equals("electricity") || source.damageType.equals("radiation")) {
+        return new ISpecialArmor.ArmorProperties(priority, 0.25, (25 * damage).toInt)
+      }
     }
     val armorDouble = player match {
       case player: EntityPlayer => getArmorDouble(player, armor)
@@ -46,6 +53,7 @@ abstract class ItemPowerArmor(renderIndex: Int, armorType: Int)
       absorbMax = 0
       absorbRatio = 0
     }
+
     return new ISpecialArmor.ArmorProperties(priority, absorbRatio, absorbMax)
   }
 
@@ -68,11 +76,11 @@ abstract class ItemPowerArmor(renderIndex: Int, armorType: Int)
       entity match {
         case player: EntityPlayer =>
           Option(player.getCurrentArmor(2)).map(chest =>
-            if (ModuleManager.itemHasActiveModule(chest, InvisibilityModule.MODULE_ACTIVE_CAMOUFLAGE)) return null)
+            if (ModuleManager.itemHasActiveModule(chest, InvisibilityModule.MODULE_ACTIVE_CAMOUFLAGE)) model.visibleSection = 99)
         case _ =>
       }
       if (ModuleManager.itemHasActiveModule(itemstack, TransparentArmorModule.MODULE_TRANSPARENT_ARMOR)) {
-        return null
+        model.visibleSection = 99
       }
       model.renderSpec = MuseItemUtils.getMuseRenderTag(itemstack, armorSlot)
     }

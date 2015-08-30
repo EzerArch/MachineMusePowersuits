@@ -17,6 +17,7 @@ buildscript {
 
 apply plugin: 'scala'
 apply plugin: 'forge'
+apply plugin: 'curseforge'
 
 // define the properties file
 ext.configFile = file "project.properties"
@@ -28,7 +29,9 @@ configFile.withReader {
     project.ext.config = new ConfigSlurper().parse prop
 }
 
-version = "${config.mod_version}." + System.getenv("BUILD_NUMBER") ?: "1"
+def buildnumber = System.getenv("BUILD_NUMBER")
+def travisbuildnumber = (System.getenv("TRAVIS_BUILD_NUMBER") ?: -111).toInteger() + 111
+version = "${config.mod_version}." + (buildnumber ?: travisbuildnumber)
 group= "${config.group_id}" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = "${config.mod_id}"
 
@@ -48,39 +51,42 @@ def getLibrary(filename) {
     }
 }
 
-getLibrary("CoFHCore-[1.7.10]3.0.0B2-dev-24.jar")
-//getLibrary("industrialcraft-2-api_1.118.401-lf.zip")
-//getLibrary("Atomic-Science-1.1.0.16-api.zip")
-//getLibrary("ThermalExpansion-API-2.3.0b.zip")
-//getLibrary("CoFHCore-API.zip")
-//getLibrary("CoFHLib-pre1.zip")
-getLibrary("GalacticraftCore-Dev-BETA-1.7-3.0.1.8-noassets.jar")
-//getLibrary("Railcraft_API_latest.zip")
-//getLibrary("MFR-API-2.5.2B2-642.zip")
-//getLibrary("forestry-api-2.3.0.1.zip")
-getLibrary("Thaumcraft-API-4.2.0.0-Compiled.jar")
-//getLibrary("MFFS2_API.zip")
-getLibrary("slick-util.jar")
+getLibrary("CoFHCore-[1.7.10]3.0.3-303-dev.jar")
+getLibrary("industrialcraft-2-2.2.765-experimental-api.jar")
+getLibrary("ThermalExpansion-[1.7.10]4.0.3B1-218-dev.jar")
+getLibrary("GalacticraftCore-Dev-1.7-3.0.12.168.jar")
+getLibrary("Railcraft_1.7.10-9.7.0.0-dev.jar")
+getLibrary("MineFactoryReloaded-[1.7.10]2.8.0-104-dev.jar")
+getLibrary("forestry_1.7.10-3.6.3.20-api.jar")
+getLibrary("Thaumcraft-deobf-1.7.10-4.2.3.5.jar")
+getLibrary("SmartRender-1.7.10-2.1.jar")
+getLibrary("RenderPlayerAPI-1.7.10-1.4.jar")
+getLibrary("appliedenergistics2-rv2-stable-10-dev.jar")
+getLibrary("buildcraft-7.0.21-dev.jar")
+getLibrary("BluePower-1.7.10-0.2.962-universal.jar")
+getLibrary("EnderIO-1.7.10-2.3.0.408_beta-dev.jar")
+getLibrary("Mekanism-1.7.10-8.1.7.252.jar")
+getLibrary("MrTJPCore-1.1.0.31-universal.jar")
+getLibrary("ProjectRed-1.7.10-4.7.0pre8.92-Base.jar")
 
-processResources
-        {
-            // this will ensure that this task is redone when the versions change.
-            inputs.property "version", project.version
-            inputs.property "mcversion", project.minecraft.version
+processResources {
+    // this will ensure that this task is redone when the versions change.
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
 
-            // replace stuff in mcmod.info, nothing else
-            from(sourceSets.main.resources.srcDirs) {
-                include 'mcmod.info'
+    // replace stuff in mcmod.info, nothing else
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
 
-                // replace version and mcversion
-                expand 'version':project.version, 'mcversion':project.minecraft.version
-            }
+        // replace version and mcversion
+        expand 'version':project.version, 'mcversion':project.minecraft.version
+    }
 
-            // copy everything else, thats not the mcmod.info
-            from(sourceSets.main.resources.srcDirs) {
-                exclude 'mcmod.info'
-            }
-        }
+    // copy everything else, thats not the mcmod.info
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
 
 jar {
     manifest {
@@ -95,17 +101,47 @@ task devJar(type: Jar) {
 
 task copyToLib(type: Copy) {
     into "$buildDir/libs"
-    from configurations.runtime {
-        include 'slick-util.jar'
-    }
     from(sourceSets.main.resources.srcDirs){
-        include 'vanilla.recipes'
-        include 'ThermalExpansion.recipes'
+        include 'mps-vanilla.recipes'
+        include 'mps-thermalexpansion.recipes'
+        include 'mps-ic2.recipes'
     }
 }
+
+def getGitChangelog = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        def gitHash = System.getenv("GIT_COMMIT")
+        def gitPrevHash = System.getenv("GIT_PREVIOUS_COMMIT")
+        if(gitHash && gitPrevHash) {
+            exec {
+                commandLine 'git', 'log', '--pretty=tformat:%s - %aN', '' + gitPrevHash + '...' + gitHash
+                standardOutput = stdout
+            }
+            return stdout.toString().trim()
+        } else {
+            return "";
+        }
+    } catch(ignored) {
+        return "";
+    }
+}
+
 
 build.dependsOn(copyToLib)
 
 artifacts {
     archives devJar
+}
+
+curse {
+    projectId = '235442'
+    apiKey = project.hasProperty('curseForgeApiKey') ? project.curseForgeApiKey : ''
+    releaseType = 'beta'
+
+    changelog = getGitChangelog()
+
+    addGameVersion '1.7.10'
+
+    relatedProject 'numina': 'requiredLibrary'
 }

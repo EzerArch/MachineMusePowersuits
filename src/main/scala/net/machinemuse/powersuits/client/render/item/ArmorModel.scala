@@ -5,7 +5,7 @@ import net.minecraft.client.model.{ModelBiped, ModelRenderer}
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.item.ItemStack
+import net.minecraft.item.{EnumAction, ItemStack}
 import net.minecraftforge.client.model.obj.WavefrontObject
 import net.minecraft.nbt.NBTTagCompound
 import net.machinemuse.numina.general.MuseLogger
@@ -25,16 +25,18 @@ trait ArmorModel extends ModelBiped {
     setInitialOffsets(rp, xo, yo, zo)
   }
 
-  clearAndAddChildWithInitialOffsets(bipedHead, 0.0F, 0.0F, 0.0F)
-  clearAndAddChildWithInitialOffsets(bipedBody, 0.0F, 0.0F, 0.0F)
-  clearAndAddChildWithInitialOffsets(bipedRightArm, 5, 2.0F, 0.0F)
-  clearAndAddChildWithInitialOffsets(bipedLeftArm, -5, 2.0F, 0.0F)
-  clearAndAddChildWithInitialOffsets(bipedRightLeg, 2, 12.0F, 0.0F)
-  clearAndAddChildWithInitialOffsets(bipedLeftLeg, -2, 12.0F, 0.0F)
+  def init(): Unit = {
+    clearAndAddChildWithInitialOffsets(bipedHead, 0.0F, 0.0F, 0.0F)
+    clearAndAddChildWithInitialOffsets(bipedBody, 0.0F, 0.0F, 0.0F)
+    clearAndAddChildWithInitialOffsets(bipedRightArm, 5, 2.0F, 0.0F)
+    clearAndAddChildWithInitialOffsets(bipedLeftArm, -5, 2.0F, 0.0F)
+    clearAndAddChildWithInitialOffsets(bipedRightLeg, 2, 12.0F, 0.0F)
+    clearAndAddChildWithInitialOffsets(bipedLeftLeg, -2, 12.0F, 0.0F)
+    bipedHeadwear.cubeList.clear()
+    bipedEars.cubeList.clear()
+    bipedCloak.cubeList.clear()
+  }
 
-  bipedHeadwear.cubeList.clear()
-  bipedEars.cubeList.clear()
-  bipedCloak.cubeList.clear()
 
   private def logModelParts(model: WavefrontObject) {
     MuseLogger.logDebug(model.toString + ":")
@@ -56,9 +58,19 @@ trait ArmorModel extends ModelBiped {
     try {
       val entLive: EntityLivingBase = entity.asInstanceOf[EntityLivingBase]
       val stack: ItemStack = entLive.getEquipmentInSlot(0)
-      this.heldItemRight = if (stack != null) 1 else 0
-      this.isSneak = entLive.isSneaking
-      this.aimedBow = entLive.asInstanceOf[EntityPlayer].getItemInUse != null
+      heldItemRight = if (stack != null) 1 else 0
+      isSneak = entLive.isSneaking
+      isRiding = entLive.isRiding
+      val entPlayer = entLive.asInstanceOf[EntityPlayer]
+      if ((stack != null) && (entPlayer.getItemInUseCount > 0))
+      {
+        val enumaction = stack.getItemUseAction
+        if (enumaction == EnumAction.block) {
+          heldItemRight = 3
+        } else if (enumaction == EnumAction.bow) {
+          aimedBow = true
+        }
+      }
     } catch {
       case _: Exception =>
     }
@@ -76,7 +88,11 @@ trait ArmorModel extends ModelBiped {
     bipedLeftArm.showModel = true
     bipedRightLeg.showModel = true
     bipedLeftLeg.showModel = true
+  }
 
-    setRotationAngles(par2, par3, par4, par5, par6, scale, entity)
+  def post(entity: Entity, par2: Float, par3: Float, par4: Float, par5: Float, par6: Float, scale: Float): Unit = {
+    aimedBow = false
+    isSneak = false
+    heldItemRight = 0
   }
 }
