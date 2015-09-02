@@ -1,10 +1,13 @@
 package net.machinemuse.powersuits.powermodule.misc;
 
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.relauncher.Side;
 import net.machinemuse.api.IModularItem;
 import net.machinemuse.api.ModuleManager;
 import net.machinemuse.api.moduletrigger.IPlayerTickModule;
 import net.machinemuse.api.moduletrigger.IToggleableModule;
 import net.machinemuse.general.sound.SoundDictionary;
+import net.machinemuse.numina.basemod.NuminaConfig;
 import net.machinemuse.numina.sound.Musique;
 import net.machinemuse.powersuits.item.ItemComponent;
 import net.machinemuse.powersuits.powermodule.PowerModuleBase;
@@ -13,7 +16,6 @@ import net.machinemuse.utils.MuseCommonStrings;
 import net.machinemuse.utils.MuseItemUtils;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.StatCollector;
 
 import java.util.List;
 
@@ -38,8 +40,8 @@ public class WaterElectrolyzerModule extends PowerModuleBase implements IPlayerT
     }
 
     @Override
-    public String getLocalizedName() {
-        return StatCollector.translateToLocal("module.waterElectrolyzer.name");
+    public String getUnlocalizedName() {
+        return "waterElectrolyzer";
     }
 
     @Override
@@ -52,7 +54,10 @@ public class WaterElectrolyzerModule extends PowerModuleBase implements IPlayerT
         double energy = ElectricItemUtils.getPlayerEnergy(player);
         double energyConsumption = ModuleManager.computeModularProperty(item, WATERBREATHING_ENERGY_CONSUMPTION);
         if (energy > energyConsumption && player.getAir() < 10) {
-            Musique.playClientSound(SoundDictionary.SOUND_ELECTROLYZER, 1.0f);
+
+            if ((FMLCommonHandler.instance().getEffectiveSide() == Side.CLIENT) && NuminaConfig.useSounds()) {
+                Musique.playClientSound(SoundDictionary.SOUND_ELECTROLYZER, 1.0f);
+            }
             ElectricItemUtils.drainPlayerEnergy(player, energyConsumption);
             player.setAir(300);
         }

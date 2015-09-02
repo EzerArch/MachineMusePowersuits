@@ -6,6 +6,7 @@ import cpw.mods.fml.common.{Mod, SidedProxy}
 import cpw.mods.fml.common.event.{FMLInitializationEvent, FMLPostInitializationEvent, FMLPreInitializationEvent}
 import cpw.mods.fml.common.network.NetworkRegistry
 import cpw.mods.fml.common.registry.EntityRegistry
+import net.machinemuse.api.{ILocalizeableModule, IPowerModule, ModuleManager}
 import net.machinemuse.powersuits.entity.{EntityLuxCapacitor, EntityPlasmaBolt, EntitySpinningBlade}
 import net.machinemuse.powersuits.event.{HarvestEventHandler, MovementManager}
 import net.machinemuse.powersuits.network.packets.MPSPacketList
@@ -18,7 +19,7 @@ import net.minecraftforge.common.config.Configuration
  *
  * @author MachineMuse
  */
-@Mod(modid = "powersuits", modLanguage = "scala", dependencies = "required-after:numina")
+@Mod(modid = "powersuits", modLanguage = "scala")
 object ModularPowersuits {
   @SidedProxy(clientSide = "net.machinemuse.powersuits.common.ClientProxy", serverSide = "net.machinemuse.powersuits.common.ServerProxy")
   var proxy: CommonProxy = null
@@ -45,9 +46,6 @@ object ModularPowersuits {
     Config.getSalvageChance
     Config.baseMaxHeat
     Config.allowConflictingKeybinds
-    Config.fontURI
-    Config.fontName
-    Config.fontDetail
     Config.fontAntiAliasing
     Config.useCustomFonts
     Config.glowMultiplier
@@ -63,7 +61,9 @@ object ModularPowersuits {
 
   @Mod.EventHandler def postInit(event: FMLPostInitializationEvent) {
     proxy.postInit()
-    ModCompatability.registerModSpecificModules()
+    ModCompatibility.registerModSpecificModules()
+    Config.extractRecipes
+    Config.addCustomInstallCosts
     Config.getConfig.save
   }
 

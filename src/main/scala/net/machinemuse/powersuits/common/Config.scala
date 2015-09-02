@@ -1,10 +1,17 @@
 package net.machinemuse.powersuits.common
 
+import java.nio.file.{Paths, Files}
+
+import com.google.gson.Gson
 import cpw.mods.fml.common.FMLCommonHandler
+import cpw.mods.fml.common.registry.GameRegistry
 import cpw.mods.fml.relauncher.Side
 import net.machinemuse.api.IModularItem
 import net.machinemuse.api.IPowerModule
 import net.machinemuse.api.ModuleManager
+import net.machinemuse.numina.basemod.Numina
+import net.machinemuse.numina.general.MuseLogger
+import net.machinemuse.powersuits.item.ItemComponent
 import net.machinemuse.powersuits.powermodule.armor.BasicPlatingModule
 import net.machinemuse.powersuits.powermodule.armor.DiamondPlatingModule
 import net.machinemuse.powersuits.powermodule.armor.EnergyShieldModule
@@ -21,12 +28,16 @@ import net.machinemuse.powersuits.powermodule.weapon.PlasmaCannonModule
 import net.machinemuse.powersuits.powermodule.weapon.RailgunModule
 import net.machinemuse.utils.MuseStringUtils
 import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.init.Blocks
+import net.minecraft.item.ItemStack
 import net.minecraftforge.common.config.Configuration
 import org.lwjgl.input.Keyboard
-import java.io.File
+import java.io.{PrintWriter, FileOutputStream, FileInputStream, File}
 import java.util.Arrays
 import java.util.Collections
 import java.util.List
+
+import scala.io.Source
 
 /**
  * Initial attempt at storing all tweakable/configurable values in one class.
@@ -36,6 +47,43 @@ import java.util.List
  * @author MachineMuse
  */
 object Config {
+  /**
+   * Called in post-init. Extracts recipes if the configuration value is not found.
+   */
+  def extractRecipes() = {
+    val key = "Auto-extract recipes"
+    if(!config.hasKey(Configuration.CATEGORY_GENERAL, key) || config.get(Configuration.CATEGORY_GENERAL, key, false).getBoolean) {
+      config.get(Configuration.CATEGORY_GENERAL, key, false)
+      var found=false
+      if(ModCompatibility.isThermalExpansionLoaded) {
+        found=true
+        //TE
+        copyRecipe("mps-thermalexpansion.recipes")
+      }
+      if (ModCompatibility.isIndustrialCraftLoaded) {
+        found=true
+        //IC2
+        copyRecipe("mps-ic2.recipes")
+      }
+      if (ModCompatibility.isEnderIOLoaded) {
+        found=true
+        //enderIO
+        copyRecipe("mps-enderio.recipes")
+      }
+      if(!found) {
+        //vanilla
+        copyRecipe("mps-vanilla.recipes")
+      }
+    }
+  }
+
+  def copyRecipe(inFile:String): Unit = {
+    val src = classOf[CommonProxy].getClassLoader.getResourceAsStream(inFile)
+    val dest = new File(Numina.configDir.toString + "/machinemuse/recipes/" + inFile)
+    if(!dest.exists()) {
+      Files.copy(src, dest.toPath)
+    }
+  }
   /**
    * Called in the pre-init phase of initialization, informs Forge that we
    * want the following blockIDs.
@@ -143,6 +191,7 @@ object Config {
     addModule(new ShockAbsorberModule(FEETONLY))
     addModule(new WaterElectrolyzerModule(HEADONLY))
     addModule(new NightVisionModule(HEADONLY))
+    addModule(new BinocularsModule(HEADONLY))
     addModule(new FlightControlModule(HEADONLY))
     addModule(new InvisibilityModule(TORSOONLY))
     addModule(new BlinkDriveModule(TOOLONLY))
@@ -234,4 +283,51 @@ object Config {
   var configFolder: File = null
   private var config: Configuration = null
   var canUseShaders: Boolean = false
+
+  def addCustomInstallCosts():Unit = {
+    val installCostFile = new File(configFolder, "custominstallcosts.json")
+    val gson = new Gson()
+    if(installCostFile.exists) {
+      val source = Source.fromFile(installCostFile)
+      val string = source.mkString
+      source.close()
+      MuseLogger.logDebug(string)
+      val costs = gson.fromJson[Array[InstallCost]](string, classOf[Array[InstallCost]])
+      costs.foreach { cost=>
+        val moduleName = cost.moduleName
+        val item = GameRegistry.findItem(cost.modId, cost.itemName)
+        if(item != null) {
+          val metadata = if (cost.itemMetadata == null) 0 else cost.itemMetadata.intValue()
+          val quantity = if (cost.itemQuantity == null) 1 else cost.itemQuantity.intValue()
+          val stack = new ItemStack(item, quantity, metadata)
+          if(stack != null) {
+            ModuleManager.addCustomInstallCost(moduleName, stack)
+          } else {
+            MuseLogger.logError("Invalid Itemstack in custom install cost. Module [" + cost.moduleName + "], item [" + cost.itemName + "]")
+          }
+        } else {
+          MuseLogger.logError("Invalid Item in custom install cost. Module [" + cost.moduleName + "], item [" + cost.itemName + "]")
+        }
+      }
+    } else {
+      installCostFile.createNewFile()
+      val examplecost = new InstallCost()
+      examplecost.moduleName = "Shock Absorber"
+      examplecost.itemName = "wool"
+      examplecost.modId = "minecraft"
+      examplecost.itemQuantity = 2
+      examplecost.itemMetadata = 0
+      val examplecost2 = new InstallCost()
+      examplecost2.moduleName = "Shock Absorber"
+      examplecost2.itemName = "powerArmorComponent"
+      examplecost2.modId = "powersuits"
+      examplecost2.itemQuantity = 2
+      examplecost2.itemMetadata = 2
+      val output = Array(examplecost, examplecost2)
+      val json = gson.toJson(output)
+      val dest = new PrintWriter(installCostFile)
+      dest.write(json)
+      dest.close()
+    }
+  }
 }

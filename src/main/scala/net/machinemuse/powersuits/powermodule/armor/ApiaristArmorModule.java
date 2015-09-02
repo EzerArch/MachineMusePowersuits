@@ -1,13 +1,10 @@
 package net.machinemuse.powersuits.powermodule.armor;
 
+import cpw.mods.fml.common.registry.GameRegistry;
 import net.machinemuse.api.IModularItem;
-import net.machinemuse.powersuits.common.ModCompatability;
 import net.machinemuse.powersuits.powermodule.PowerModuleBase;
 import net.machinemuse.utils.MuseCommonStrings;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.StatCollector;
-
-import cpw.mods.fml.common.registry.GameRegistry;
 
 import java.util.List;
 
@@ -39,8 +36,7 @@ public class ApiaristArmorModule extends PowerModuleBase {
     }
 
     @Override
-    public String getLocalizedName() {
-        return StatCollector.translateToLocal("module.apiaristArmor.name");
+    public String getUnlocalizedName() { return "apiaristArmor";
     }
 
     @Override

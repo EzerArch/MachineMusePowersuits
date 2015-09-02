@@ -1,8 +1,6 @@
 package net.machinemuse.powersuits.powermodule;
 
-import net.machinemuse.api.IModularItem;
-import net.machinemuse.api.IPowerModule;
-import net.machinemuse.api.IPropertyModifier;
+import net.machinemuse.api.*;
 import net.machinemuse.general.gui.MuseIcon;
 import net.machinemuse.numina.render.MuseTextureUtils;
 import net.machinemuse.powersuits.common.Config;
@@ -12,11 +10,12 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.IIcon;
+import net.minecraft.util.StatCollector;
 
 import java.util.*;
 
-public abstract class PowerModuleBase implements IPowerModule {
-    protected List<ItemStack> installCost;
+public abstract class PowerModuleBase implements ILocalizeableModule {
+    protected List<ItemStack> defaultInstallCost;
     protected List<IModularItem> validItems;
     protected Map<String, List<IPropertyModifier>> propertyModifiers;
     protected static Map<String, String> units = new HashMap<String, String>();
@@ -26,7 +25,7 @@ public abstract class PowerModuleBase implements IPowerModule {
 
     public PowerModuleBase(String name, List<IModularItem> validItems) {
         this.validItems = validItems;
-        this.installCost = new ArrayList();
+        this.defaultInstallCost = new ArrayList();
         this.propertyModifiers = new HashMap();
         this.defaultTag = new NBTTagCompound();
         this.defaultTag.setBoolean(MuseItemUtils.ONLINE, true);
@@ -35,7 +34,7 @@ public abstract class PowerModuleBase implements IPowerModule {
 
     public PowerModuleBase(List<IModularItem> validItems) {
         this.validItems = validItems;
-        this.installCost = new ArrayList();
+        this.defaultInstallCost = new ArrayList();
         this.propertyModifiers = new HashMap();
         this.defaultTag = new NBTTagCompound();
         this.defaultTag.setBoolean(MuseItemUtils.ONLINE, true);
@@ -58,11 +57,15 @@ public abstract class PowerModuleBase implements IPowerModule {
 
     @Override
     public List<ItemStack> getInstallCost() {
-        return installCost;
+        if(ModuleManager.hasCustomInstallCost(this.getDataName())) {
+            return ModuleManager.getCustomInstallCost(this.getDataName());
+        } else {
+            return defaultInstallCost;
+        }
     }
 
     public PowerModuleBase addInstallCost(ItemStack stack) {
-        this.installCost.add(stack);
+        this.defaultInstallCost.add(stack);
         return this;
     }
 
@@ -158,4 +161,13 @@ public abstract class PowerModuleBase implements IPowerModule {
         // return "/terrain.png";
     }
 
+    @Override
+    public String getLocalizedName() {
+        return StatCollector.translateToLocal("module." + getUnlocalizedName() + ".name");
+    }
+
+    @Override
+    public String getUnlocalizedName() {
+        return "Unknown Module";
+    }
 }
