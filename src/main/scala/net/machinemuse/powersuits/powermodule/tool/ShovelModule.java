@@ -13,15 +13,14 @@ import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemTool;
 import net.minecraft.world.World;
-import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.event.entity.player.PlayerEvent.BreakSpeed;
 
-import java.util.List;
+import java.util.*;
 
 public class ShovelModule extends PowerModuleBase implements IBlockBreakingModule, IToggleableModule {
     public static final String MODULE_SHOVEL = "Shovel";
-    public static final ItemStack ironShovel = new ItemStack(Items.iron_shovel);
     public static final String SHOVEL_HARVEST_SPEED = "Shovel Harvest Speed";
     public static final String SHOVEL_ENERGY_CONSUMPTION = "Shovel Energy Consumption";
 
@@ -59,9 +58,32 @@ public class ShovelModule extends PowerModuleBase implements IBlockBreakingModul
         return "toolshovel";
     }
 
+    private boolean istEffectiveHarvestTool(Block block, int metadata)
+    {
+        ItemStack emulatedTool = new ItemStack(Items.iron_shovel);
+
+        if (emulatedTool.getItem().canHarvestBlock(block, emulatedTool))
+            return true;
+
+        String effectiveTool = block.getHarvestTool(metadata);
+
+        // some blocks like stairs do no not have a tool assigned to them
+        if (effectiveTool == null)
+        {
+            {
+                if (emulatedTool.func_150997_a/*getStrVsBlock*/(block) >= ((ItemTool) emulatedTool.getItem()).func_150913_i/*getToolMaterial*/().getEfficiencyOnProperMaterial())
+                {
+                    return true;
+                }
+            }
+        }
+        return effectiveTool == "shovel";
+    }
+
     @Override
     public boolean canHarvestBlock(ItemStack stack, Block block, int meta, EntityPlayer player) {
-        if (ForgeHooks.canToolHarvestBlock(block, meta, ironShovel)) {
+        if (istEffectiveHarvestTool(block, meta)) {
+
             if (ElectricItemUtils.getPlayerEnergy(player) > ModuleManager.computeModularProperty(stack, SHOVEL_ENERGY_CONSUMPTION)) {
                 return true;
             }
@@ -71,7 +93,7 @@ public class ShovelModule extends PowerModuleBase implements IBlockBreakingModul
 
     @Override
     public boolean onBlockDestroyed(ItemStack stack, World world, Block block, int x, int y, int z, EntityPlayer player) {
-        int meta = world.getBlockMetadata(x,y,z);
+        int meta = world.getBlockMetadata(x, y, z);
         if (canHarvestBlock(stack, block, meta, player)) {
             ElectricItemUtils.drainPlayerEnergy(player, ModuleManager.computeModularProperty(stack, SHOVEL_ENERGY_CONSUMPTION));
             return true;
